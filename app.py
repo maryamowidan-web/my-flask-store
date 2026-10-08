@@ -321,13 +321,14 @@ def logout():
     return redirect(url_for('home'))
 
 # ---------------- 4. Initial Seed Data ----------------
+# Create database tables automatically on launch
+with app.app_context():
+    db.create_all()
+    if not Product.query.first():
+        p1 = Product(name="Smart Watch Pro", price=120.00, description="Water-resistant smartwatch with fitness tracking.", image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500")
+        p2 = Product(name="Wireless Headphones", price=55.50, description="High-quality noise-canceling bluetooth headphones.", image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500")
+        db.session.add_all([p1, p2])
+        db.session.commit()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        if not Product.query.first():
-            p1 = Product(name="Smart Watch Pro", price=120.00, description="Water-resistant smartwatch with fitness tracking.", image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500")
-            p2 = Product(name="Wireless Headphones", price=55.50, description="High-quality noise-canceling bluetooth headphones.", image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500")
-            db.session.add_all([p1, p2])
-            db.session.commit()
-            
     app.run(host='127.0.0.1', port=8080, debug=False)
