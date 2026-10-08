@@ -5,15 +5,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = 'real_ecommerce_super_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///real_store.db'
-db = SQLAlchemy(app)
-with app.app_context():
-    db.create_all()
-    if not Product.query.first():
-        p1 = Product(name="Smart Watch Pro", price=120.00, description="Water-resistant smartwatch with fitness tracking.", image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500")
-        p2 = Product(name="Wireless Headphones", price=55.50, description="High-quality noise-canceling bluetooth headphones.", image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500")
-        db.session.add_all([p1, p2])
-        db.session.commit()
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+db = SQLAlchemy(app)
 
 # ---------------- 1. Database Models ----------------
 class User(db.Model):
@@ -35,6 +29,25 @@ class Order(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), default='Completed')
+
+# Auto-initialize database tables and initial products for Gunicorn/Render
+with app.app_context():
+    db.create_all()
+    if not Product.query.first():
+        p1 = Product(
+            name="Smart Watch Pro", 
+            price=120.00, 
+            description="Water-resistant smartwatch with fitness tracking.", 
+            image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500"
+        )
+        p2 = Product(
+            name="Wireless Headphones", 
+            price=55.50, 
+            description="High-quality noise-canceling bluetooth headphones.", 
+            image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"
+        )
+        db.session.add_all([p1, p2])
+        db.session.commit()
 
 # ---------------- 2. HTML Base Layout ----------------
 HTML_LAYOUT = """
@@ -89,7 +102,6 @@ HTML_LAYOUT = """
 
 # ---------------- 3. Application Routes ----------------
 
-# Home Page
 @app.route('/')
 def home():
     products = Product.query.all()
@@ -115,7 +127,6 @@ def home():
     """
     return render_template_string(template, products=products)
 
-# Shopping Cart View
 @app.route('/cart')
 def view_cart():
     cart = session.get('cart', {})
@@ -164,7 +175,6 @@ def view_cart():
     """
     return render_template_string(template, cart_items=cart_items, total=total)
 
-# Add Product to Cart
 @app.route('/add_to_cart/<int:product_id>')
 def add_to_cart(product_id):
     cart = session.get('cart', {})
@@ -174,7 +184,6 @@ def add_to_cart(product_id):
     flash('Item added to cart successfully!')
     return redirect(url_for('home'))
 
-# Checkout Page
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     if 'user_id' not in session:
@@ -219,7 +228,6 @@ def checkout():
     """
     return render_template_string(template, total=total)
 
-# Admin Dashboard
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if not session.get('is_admin'):
@@ -269,7 +277,6 @@ def admin():
     """
     return render_template_string(template, orders=orders)
 
-# User Authentication
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -327,16 +334,6 @@ def logout():
     session.clear()
     flash('Logged out successfully.')
     return redirect(url_for('home'))
-
-# ---------------- 4. Initial Seed Data ----------------
-# Create database tables automatically on launch
-with app.app_context():
-    db.create_all()
-    if not Product.query.first():
-        p1 = Product(name="Smart Watch Pro", price=120.00, description="Water-resistant smartwatch with fitness tracking.", image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500")
-        p2 = Product(name="Wireless Headphones", price=55.50, description="High-quality noise-canceling bluetooth headphones.", image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500")
-        db.session.add_all([p1, p2])
-        db.session.commit()
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080, debug=False)
