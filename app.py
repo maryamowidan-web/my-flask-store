@@ -1,9 +1,10 @@
 from flask import Flask, render_template_string, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 app = Flask(__name__)
-app.secret_key = 'real_ecommerce_super_secret_key'
+app.secret_key = os.environ.get('SECRET_KEY', 'default_fallback_secret_key_12345')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///real_store.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -30,9 +31,10 @@ class Order(db.Model):
     total_amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), default='Completed')
 
-# Helper function to initialize database
-def init_db():
-    with app.app_context():
+# Auto-initialize DB before handling the first request
+@app.before_request
+def initialize_database_once():
+    if not getattr(app, '_got_first_request', False):
         db.create_all()
         if not Product.query.first():
             p1 = Product(
@@ -49,9 +51,7 @@ def init_db():
             )
             db.session.add_all([p1, p2])
             db.session.commit()
-
-# Ensure database is initialized on start
-init_db()
+        app._got_first_request = True
 
 # ---------------- 2. HTML Base Layout ----------------
 HTML_LAYOUT = """
