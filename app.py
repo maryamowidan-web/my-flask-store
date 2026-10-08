@@ -4,32 +4,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'default_fallback_secret_key_12345')
+app.secret_key = os.environ.get('SECRET_KEY', 'ecommerce_super_secret_key_123')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///real_store.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-# Create database and seed initial products on startup
-with app.app_context():
-    try:
-        db.create_all()
-        if not Product.query.first():
-            p1 = Product(
-                name="Smart Watch Pro", 
-                price=120.00, 
-                description="Water-resistant smartwatch with fitness tracking.", 
-                image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500"
-            )
-            p2 = Product(
-                name="Wireless Headphones", 
-                price=55.50, 
-                description="High-quality noise-canceling bluetooth headphones.", 
-                image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"
-            )
-            db.session.add_all([p1, p2])
-            db.session.commit()
-    except Exception as e:
-        print("Database initialization note:", e)
 
 # ---------------- 1. Database Models ----------------
 class User(db.Model):
@@ -52,27 +31,24 @@ class Order(db.Model):
     total_amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), default='Completed')
 
-# Auto-initialize DB before handling the first request
-@app.before_request
-def initialize_database_once():
-    if not getattr(app, '_got_first_request', False):
-        db.create_all()
-        if not Product.query.first():
-            p1 = Product(
-                name="Smart Watch Pro", 
-                price=120.00, 
-                description="Water-resistant smartwatch with fitness tracking.", 
-                image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500"
-            )
-            p2 = Product(
-                name="Wireless Headphones", 
-                price=55.50, 
-                description="High-quality noise-canceling bluetooth headphones.", 
-                image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"
-            )
-            db.session.add_all([p1, p2])
-            db.session.commit()
-        app._got_first_request = True
+# Function to safely populate initial products
+def init_db():
+    db.create_all()
+    if not Product.query.first():
+        p1 = Product(
+            name="Smart Watch Pro", 
+            price=120.00, 
+            description="Water-resistant smartwatch with fitness tracking.", 
+            image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500"
+        )
+        p2 = Product(
+            name="Wireless Headphones", 
+            price=55.50, 
+            description="High-quality noise-canceling bluetooth headphones.", 
+            image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"
+        )
+        db.session.add_all([p1, p2])
+        db.session.commit()
 
 # ---------------- 2. HTML Base Layout ----------------
 HTML_LAYOUT = """
@@ -144,6 +120,10 @@ def home():
                     <a href="/add_to_cart/{{ p.id }}" class="btn btn-primary w-100 mt-2">Add to Cart 🛒</a>
                 </div>
             </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <p class="text-muted fs-5">No products available yet.</p>
         </div>
         {% endfor %}
     </div>
