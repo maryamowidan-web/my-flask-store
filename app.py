@@ -30,24 +30,28 @@ class Order(db.Model):
     total_amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), default='Completed')
 
-# Auto-initialize database tables and initial products for Gunicorn/Render
-with app.app_context():
-    db.create_all()
-    if not Product.query.first():
-        p1 = Product(
-            name="Smart Watch Pro", 
-            price=120.00, 
-            description="Water-resistant smartwatch with fitness tracking.", 
-            image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500"
-        )
-        p2 = Product(
-            name="Wireless Headphones", 
-            price=55.50, 
-            description="High-quality noise-canceling bluetooth headphones.", 
-            image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"
-        )
-        db.session.add_all([p1, p2])
-        db.session.commit()
+# Helper function to initialize database
+def init_db():
+    with app.app_context():
+        db.create_all()
+        if not Product.query.first():
+            p1 = Product(
+                name="Smart Watch Pro", 
+                price=120.00, 
+                description="Water-resistant smartwatch with fitness tracking.", 
+                image_url="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500"
+            )
+            p2 = Product(
+                name="Wireless Headphones", 
+                price=55.50, 
+                description="High-quality noise-canceling bluetooth headphones.", 
+                image_url="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"
+            )
+            db.session.add_all([p1, p2])
+            db.session.commit()
+
+# Ensure database is initialized on start
+init_db()
 
 # ---------------- 2. HTML Base Layout ----------------
 HTML_LAYOUT = """
@@ -58,7 +62,6 @@ HTML_LAYOUT = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-Commerce MVP</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
@@ -100,8 +103,7 @@ HTML_LAYOUT = """
 </html>
 """
 
-# ---------------- 3. Application Routes ----------------
-
+# ---------------- 3. Routes ----------------
 @app.route('/')
 def home():
     products = Product.query.all()
